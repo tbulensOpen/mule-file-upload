@@ -1,0 +1,18 @@
+Features to added to learning project:
+
+( Done ) 1) Injecting run time properties, environment properties, and application properties.
+         See ${project.dir}/references/PropertiesRuntime.htm
+           a) Created separate module to externalize environment properties to be shared across multiple systems.
+              properties module: default-environment.properties file in its resources package.
+           b) file-upload module has a provided dependency of properties module.
+           c) file-upload module has a application env.properties that uses the default-environment.properties
+           d) See mule-config how to use both the default-environment.properties along with the env.properties.
+
+2) Multiple versions of the same application running side by side.
+3) Security
+4) Performance testing
+5) Concurrency
+6) Large number of applications running side by side.
+7) Different versions of jars on different applications ( to prove no class path collisions )
+8) Demonstrate Spring Bean pooling. Multiple instances of a spring bean loaded and processing concurrently.
+   Explain when and why pooling is needed.

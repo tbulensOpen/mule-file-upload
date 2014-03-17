@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xmlns:file="http://www.mulesoft.org/schema/mule/file"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+      xmlns:spring="http://www.springframework.org/schema/beans"
+      xmlns:context="http://www.springframework.org/schema/context"
+      xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+      http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+      http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+      http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+
+    <description>
+        This configuration uses an HTTP endpoint to receive requests.
+    </description>
+
+    <context:property-placeholder location="classpath:default-environment.properties,classpath:env.properties"/>
+
+    <spring:beans>
+        <context:component-scan base-package="org.tbulens.file.upload"/>
+    </spring:beans>
+
+    <!--
+    To invoke the FileParser over HTTP, hit the following URL in your browser:
+        http://localhost:8085/fileParser?fileName=SomeFileName
+    -->
+
+    <flow name="httpFileParser" doc:name="httpFileParser">
+        <http:inbound-endpoint address="${mule.host.url}/fileParser"
+                               doc:name="http file parser"
+                               doc:description="Send Http Request passing in fileName to FileParser." exchange-pattern="request-response">
+            <http:body-to-parameter-map-transformer doc:name="Body to Parameter Map"/>
+        </http:inbound-endpoint>
+
+        <logger message="Job Parser is being about to be called." level="INFO"/>
+
+        <component class="org.tbulens.file.upload.service.FileParserImpl" doc:name="File Parser"/>
+
+        <logger message="Job Parser was called." level="INFO"/>
+
+        <catch-exception-strategy>
+            <logger level="ERROR" message="Job Parser Failed" doc:name="Log Error"/>
+        </catch-exception-strategy>
+    </flow>
+
+    <file:connector name="input" autoDelete="true" pollingFrequency="1000" streaming="true" fileAge="500"/>
+
+    <flow name="fileDirectory" doc:name="fileDirectory">
+        <file:inbound-endpoint connector-ref="input" path="${mule.output.path.parent.dir}\${mule.file.input.directory}"
+              moveToDirectory="${mule.output.path.parent.dir}\${mule.file.archive.directory}"
+              moveToPattern="#[header:originalFilename]-#[function:datestamp]"/>
+
+        <logger message="Job Parser passing file object." level="INFO"/>
+
+        <component>
+            <spring-object bean="fileParserBatchImpl"/>
+        </component>
+
+        <logger message="Batch Job Parser was called." level="INFO"/>
+        <catch-exception-strategy>
+            <logger level="ERROR" message="Batch Job Parser Failed" doc:name="Log Error"/>
+        </catch-exception-strategy>
+    </flow>
+
+    <!-- Use this as a poor man's message queue, in the real world we would use JMS -->
+    <vm:connector name="vmQueues"/>
+
+    <!-- Each entry in this queue contains a single record from a file. -->
+    <vm:endpoint name="recordQueue" path="lineRecord" exchange-pattern="one-way" />
+
+    <!-- Receive a Http request from FileParserBatch for every line, write to an in-memory queue   -->
+    <flow name="recordRequester" doc:name="recordRequester">
+        <http:inbound-endpoint address="${mule.host.url}/recordRequester"
+                               doc:name="http line processor"
+                               doc:description="Send Http Request passing in a single record to lineProcessor."
+                               exchange-pattern="request-response">
+             <http:body-to-parameter-map-transformer doc:name="Body to Parameter Map"/>
+        </http:inbound-endpoint>
+
+        <logger message="Record Requester received request." level="INFO"/>
+
+        <vm:outbound-endpoint path="recordQueue" doc:name="Record Queue" exchange-pattern="one-way"/>
+
+        <logger message="Record Requester after putting on queue." level="INFO"/>
+
+        <echo-component/>
+
+        <catch-exception-strategy>
+            <logger level="ERROR" message="Batch Job Parser Failed" doc:name="Log Error"/>
+        </catch-exception-strategy>
+    </flow>
+
+    <!-- Every record in a file is read from a queue, and processed.   -->
+    <flow name="recordProcessor" doc:name="recordProcessor">
+        <vm:inbound-endpoint path="recordQueue" doc:name="Record Queue" exchange-pattern="one-way"/>
+
+        <logger message="Record processor received request from queue." level="INFO"/>
+
+        <component>
+            <spring-object bean="recordProcessorMuleEntry"/>
+        </component>
+
+        <logger message="Record processor should of processed message." level="INFO"/>
+
+        <catch-exception-strategy>
+            <logger level="ERROR" message="Record Processor Failed" doc:name="Log Error"/>
+        </catch-exception-strategy>
+    </flow>
+</mule>

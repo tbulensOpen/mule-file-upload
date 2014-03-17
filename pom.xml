@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--<parent>-->
+        <!--<groupId>org.studentloan</groupId>-->
+        <!--<artifactId>isl-project</artifactId>-->
+        <!--<version>2.1</version>-->
+    <!--</parent>-->
+
+    <groupId>org.tbulens</groupId>
+    <artifactId>mule-file-upload-aggregate</artifactId>
+    <version>0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>Mule File Upload Aggregate</name>
+    <description>Upload a file using mule</description>
+
+    <modules>
+        <module>parent</module>
+        <module>file-upload</module>
+        <module>properties</module>
+    </modules>
+ </project>
