@@ -1,0 +1,6 @@
+*.iws
+*.ipr
+*.iml
+target
+dep.txt
+.idea
